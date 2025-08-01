@@ -54,16 +54,22 @@ with st.form("expense_form"):
 
     submitted = st.form_submit_button("Add Expense")
 
-if submitted:
-    new_entry = {
-        "ID": str(uuid.uuid4()),
-        "Date": expense_date,
-        "Category": category,
-        "Description": description,
-        "Amount": st.session_state.amount_input
-    }
-    st.session_state.expenses = pd.concat([st.session_state.expenses, pd.DataFrame([new_entry])], ignore_index=True)
-    st.success("✅ Expense added!")
+    # Handle form submission inside the form block
+    if submitted:
+        new_entry = {
+            "ID": str(uuid.uuid4()),
+            "Date": expense_date,
+            "Category": category,
+            "Description": description,
+            "Amount": st.session_state.amount_input
+        }
+        st.session_state.expenses = pd.concat([st.session_state.expenses, pd.DataFrame([new_entry])], ignore_index=True)
+        st.success("✅ Expense added!")
+
+        # Reset amount field
+        st.session_state.amount_input = 0.0
+        st.session_state.amount_clicked = False
+
 
     # Reset amount field
     st.session_state.amount_input = 0.0
