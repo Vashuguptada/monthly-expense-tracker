@@ -25,13 +25,36 @@ with st.expander("➕ Add New Category"):
             st.session_state.custom_categories.append(new_cat)
             st.success(f"Category '{new_cat}' added!")
 
+# --- Initialize Amount Input State ---
+if "amount_input" not in st.session_state:
+    st.session_state.amount_input = 0.0
+if "amount_clicked" not in st.session_state:
+    st.session_state.amount_clicked = False
+
+# --- Clear amount input on first click ---
+def clear_amount():
+    if not st.session_state.amount_clicked:
+        st.session_state.amount_input = 0.0
+        st.session_state.amount_clicked = True
+
 # --- Expense Input Form ---
 with st.form("expense_form"):
     expense_date = st.date_input("Date", date.today())
     category = st.selectbox("Category", st.session_state.custom_categories)
     description = st.text_input("Description")
-    amount = st.number_input("Amount (INR)", min_value=0.0, format="%.2f")
+    
+    # Simulate click to clear on first interaction
+    amount = st.number_input(
+        "Amount (INR)", 
+        min_value=0.0,
+        format="%.2f",
+        value=st.session_state.amount_input,
+        key="amount_input", 
+        on_change=clear_amount
+    )
+    
     submitted = st.form_submit_button("Add Expense")
+
 
 if submitted:
     new_entry = {
