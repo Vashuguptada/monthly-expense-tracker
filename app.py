@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import date
 import uuid
 
-st.set_page_config(page_title="Monthly Expense Tracker", layout="centered")
+st.set_page_config(page_title="Monthly Expense Tracker Made By Vashu", layout="centered")
 
 # --- Initialize session state ---
 if "expenses" not in st.session_state:
@@ -13,6 +13,18 @@ if "expenses" not in st.session_state:
 
 if "custom_categories" not in st.session_state:
     st.session_state.custom_categories = ["Food", "Rent", "Utilities", "Travel", "Entertainment", "Other"]
+
+if "amount_input" not in st.session_state:
+    st.session_state.amount_input = 0.0
+
+if "amount_clicked" not in st.session_state:
+    st.session_state.amount_clicked = False
+
+# --- Function to clear amount input on click ---
+def clear_amount():
+    if not st.session_state.amount_clicked:
+        st.session_state.amount_input = 0.0
+        st.session_state.amount_clicked = True
 
 # --- Title ---
 st.title("📊 Monthly Expense Tracker")
@@ -25,36 +37,22 @@ with st.expander("➕ Add New Category"):
             st.session_state.custom_categories.append(new_cat)
             st.success(f"Category '{new_cat}' added!")
 
-# --- Initialize Amount Input State ---
-if "amount_input" not in st.session_state:
-    st.session_state.amount_input = 0.0
-if "amount_clicked" not in st.session_state:
-    st.session_state.amount_clicked = False
-
-# --- Clear amount input on first click ---
-def clear_amount():
-    if not st.session_state.amount_clicked:
-        st.session_state.amount_input = 0.0
-        st.session_state.amount_clicked = True
-
 # --- Expense Input Form ---
 with st.form("expense_form"):
     expense_date = st.date_input("Date", date.today())
     category = st.selectbox("Category", st.session_state.custom_categories)
     description = st.text_input("Description")
-    
-    # Simulate click to clear on first interaction
+
     amount = st.number_input(
-        "Amount (INR)", 
+        "Amount (INR)",
         min_value=0.0,
         format="%.2f",
         value=st.session_state.amount_input,
-        key="amount_input", 
+        key="amount_input",
         on_change=clear_amount
     )
-    
-    submitted = st.form_submit_button("Add Expense")
 
+    submitted = st.form_submit_button("Add Expense")
 
 if submitted:
     new_entry = {
@@ -62,20 +60,24 @@ if submitted:
         "Date": expense_date,
         "Category": category,
         "Description": description,
-        "Amount": amount
+        "Amount": st.session_state.amount_input
     }
     st.session_state.expenses = pd.concat([st.session_state.expenses, pd.DataFrame([new_entry])], ignore_index=True)
     st.success("✅ Expense added!")
 
+    # Reset amount field
+    st.session_state.amount_input = 0.0
+    st.session_state.amount_clicked = False
+
 # --- Editable Table ---
 st.subheader("🧾 Expense Summary")
 
-# Display editable table with delete option
 if not st.session_state.expenses.empty:
     for idx, row in st.session_state.expenses.iterrows():
         col1, col2, col3, col4, col5, col6 = st.columns([1.5, 2, 3, 2, 1.5, 1])
         col1.date_input("Date", row["Date"], key=f"date_{row['ID']}")
-        col2.selectbox("Category", st.session_state.custom_categories, index=st.session_state.custom_categories.index(row["Category"]), key=f"cat_{row['ID']}")
+        col2.selectbox("Category", st.session_state.custom_categories,
+                       index=st.session_state.custom_categories.index(row["Category"]), key=f"cat_{row['ID']}")
         col3.text_input("Description", row["Description"], key=f"desc_{row['ID']}")
         col4.number_input("Amount", value=row["Amount"], format="%.2f", key=f"amt_{row['ID']}")
         if col5.button("💾 Update", key=f"update_{row['ID']}"):
