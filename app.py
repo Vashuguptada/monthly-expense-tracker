@@ -41,7 +41,7 @@ if submitted:
     st.success("Expense added!")
 
 # Total & Summary
-st.subheader("🧾 Expense Summary)
+st.subheader("🧾 Expense Summary")
 if not st.session_state.expenses.empty:
     st.dataframe(st.session_state.expenses)
 
