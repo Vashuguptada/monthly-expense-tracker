@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import date
 
-st.set_page_config(page_title="Monthly Expense Tracker", layout="centered")
+st.set_page_config(page_title="Monthly Expense Tracker Made By Vashu", layout="centered")
 
 # Session State for storing data
 if "expenses" not in st.session_state:
