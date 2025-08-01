@@ -12,7 +12,7 @@ if "expenses" not in st.session_state:
 if "custom_categories" not in st.session_state:
     st.session_state.custom_categories = []
 
-st.title("📊 Monthly Expense Tracker")
+st.title("📊 Monthly Expense Tracker Made By Vashu")
 
 # Add new category
 with st.expander("➕ Add New Category"):
@@ -41,7 +41,7 @@ if submitted:
     st.success("Expense added!")
 
 # Total & Summary
-st.subheader("🧾 Expense Summary Made By Vashu")
+st.subheader("🧾 Expense Summary)
 if not st.session_state.expenses.empty:
     st.dataframe(st.session_state.expenses)
 
