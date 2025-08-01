@@ -3,128 +3,71 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import date
-import uuid
 
-# --- Page config ---
 st.set_page_config(page_title="Monthly Expense Tracker", layout="centered")
 
-# --- Initialize session state ---
+# Session State for storing data
 if "expenses" not in st.session_state:
-    st.session_state.expenses = pd.DataFrame(columns=["ID", "Date", "Category", "Description", "Amount"])
-
+    st.session_state.expenses = pd.DataFrame(columns=["Date", "Category", "Description", "Amount"])
 if "custom_categories" not in st.session_state:
-    st.session_state.custom_categories = ["Food", "Rent", "Utilities", "Travel", "Entertainment", "Other"]
+    st.session_state.custom_categories = []
 
-if "amount_input" not in st.session_state:
-    st.session_state.amount_input = 0.0
-
-if "amount_clicked" not in st.session_state:
-    st.session_state.amount_clicked = False
-
-# --- Function to clear amount on first click ---
-def clear_amount():
-    if not st.session_state.amount_clicked:
-        st.session_state.amount_input = 0.0
-        st.session_state.amount_clicked = True
-
-# --- Title ---
 st.title("📊 Monthly Expense Tracker")
 
-# --- Add Custom Category ---
+# Add new category
 with st.expander("➕ Add New Category"):
-    new_cat = st.text_input("Enter new category name")
+    new_cat = st.text_input("Enter new category")
     if st.button("Add Category"):
         if new_cat and new_cat not in st.session_state.custom_categories:
             st.session_state.custom_categories.append(new_cat)
-            st.success(f"Category '{new_cat}' added!")
+            st.success(f"✅ '{new_cat}' added!")
 
-# --- Expense Input Form ---
-with st.form("expense_form"):
+# Final category list
+default_categories = ["Food", "Rent", "Utilities", "Travel", "Entertainment", "Other"]
+all_categories = default_categories + st.session_state.custom_categories
+
+# Expense Form
+with st.form("expense_form", clear_on_submit=True):
     expense_date = st.date_input("Date", date.today())
-    category = st.selectbox("Category", st.session_state.custom_categories)
+    category = st.selectbox("Category", all_categories)
     description = st.text_input("Description")
+    amount = st.number_input("Amount (INR)", min_value=0.0, format="%.2f", step=10.0)
+    submitted = st.form_submit_button("➕ Add Expense")
 
-    amount = st.number_input(
-        "Amount (INR)",
-        min_value=0.0,
-        format="%.2f",
-        value=st.session_state.amount_input,
-        key="amount_input",
-        on_change=clear_amount
-    )
+if submitted:
+    new_entry = pd.DataFrame([[expense_date, category, description, amount]],
+                             columns=["Date", "Category", "Description", "Amount"])
+    st.session_state.expenses = pd.concat([st.session_state.expenses, new_entry], ignore_index=True)
+    st.success("Expense added!")
 
-    submitted = st.form_submit_button("Add Expense")
-
-    # Process form submission
-    if submitted:
-        new_entry = {
-            "ID": str(uuid.uuid4()),
-            "Date": expense_date,
-            "Category": category,
-            "Description": description,
-            "Amount": st.session_state.amount_input
-        }
-        st.session_state.expenses = pd.concat(
-            [st.session_state.expenses, pd.DataFrame([new_entry])],
-            ignore_index=True
-        )
-        st.success("✅ Expense added!")
-
-        # Reset amount field after submit
-        st.session_state.amount_input = 0.0
-        st.session_state.amount_clicked = False
-
-# --- Editable Table ---
+# Total & Summary
 st.subheader("🧾 Expense Summary")
-
 if not st.session_state.expenses.empty:
-    for idx, row in st.session_state.expenses.iterrows():
-        col1, col2, col3, col4, col5, col6 = st.columns([1.5, 2, 3, 2, 1.5, 1])
-        col1.date_input("Date", row["Date"], key=f"date_{row['ID']}")
-        col2.selectbox(
-            "Category", st.session_state.custom_categories,
-            index=st.session_state.custom_categories.index(row["Category"]),
-            key=f"cat_{row['ID']}"
-        )
-        col3.text_input("Description", row["Description"], key=f"desc_{row['ID']}")
-        col4.number_input("Amount", value=row["Amount"], format="%.2f", key=f"amt_{row['ID']}")
+    st.dataframe(st.session_state.expenses)
 
-        if col5.button("💾 Update", key=f"update_{row['ID']}"):
-            st.session_state.expenses.loc[idx, "Date"] = st.session_state[f"date_{row['ID']}"]
-            st.session_state.expenses.loc[idx, "Category"] = st.session_state[f"cat_{row['ID']}"]
-            st.session_state.expenses.loc[idx, "Description"] = st.session_state[f"desc_{row['ID']}"]
-            st.session_state.expenses.loc[idx, "Amount"] = st.session_state[f"amt_{row['ID']}"]
-            st.success("Updated successfully")
+    # Total
+    total = st.session_state.expenses["Amount"].sum()
+    st.metric("💰 Total Expenses", f"₹ {total:,.2f}")
 
-        if col6.button("🗑️ Delete", key=f"del_{row['ID']}"):
-            st.session_state.expenses.drop(index=idx, inplace=True)
-            st.session_state.expenses.reset_index(drop=True, inplace=True)
-            st.rerun()
-
-# --- Total Amount ---
-total = st.session_state.expenses["Amount"].sum()
-st.metric("💰 Total Expenses", f"₹ {total:,.2f}")
-
-# --- Category-wise Summary Chart ---
-st.subheader("📂 Category-wise Summary")
-
-if not st.session_state.expenses.empty:
+    # Category-wise Chart
+    st.subheader("📂 Category-wise Expenses")
     summary = st.session_state.expenses.groupby("Category")["Amount"].sum().reset_index()
 
-    # Seaborn Bar Chart
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=summary, x="Category", y="Amount", palette="muted", ax=ax)
-
-    for container in ax.containers:
-        ax.bar_label(container, fmt="₹%.2f", label_type="edge", fontsize=9)
-
-    ax.set_ylabel("Amount (INR)")
-    ax.set_title("Category-wise Expense Breakdown")
+    fig, ax = plt.subplots()
+    sns.barplot(data=summary, x="Category", y="Amount", palette="pastel", ax=ax)
+    ax.set_title("Expenses by Category")
+    ax.bar_label(ax.containers[0], fmt='₹%.0f', label_type='edge', padding=3)
     st.pyplot(fig)
 
-    # Optional Pie Chart
-    with st.expander("📈 Show Pie Chart"):
-        fig2, ax2 = plt.subplots()
-        ax2.pie(summary["Amount"], labels=summary["Category"], autopct="%.1f%%", startangle=90, counterclock=False)
-        ax2.set_title("Expense Distribution")
-        st.pyplot(fig2)
+    # Date-wise Line Chart
+    st.subheader("📅 Expenses Over Time")
+    line_data = st.session_state.expenses.groupby("Date")["Amount"].sum().reset_index()
+    fig2, ax2 = plt.subplots()
+    sns.lineplot(data=line_data, x="Date", y="Amount", marker="o", ax=ax2)
+    ax2.set_title("Daily Expense Trend")
+    for x, y in zip(line_data["Date"], line_data["Amount"]):
+        ax2.text(x, y, f"₹{int(y)}", ha="center", va="bottom")
+    st.pyplot(fig2)
+
+else:
+    st.info("No expenses added yet.")
