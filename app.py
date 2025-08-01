@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from datetime import date
 import uuid
 
-st.set_page_config(page_title="Monthly Expense Tracker Made By Vashu", layout="centered")
+# --- Page config ---
+st.set_page_config(page_title="Monthly Expense Tracker", layout="centered")
 
 # --- Initialize session state ---
 if "expenses" not in st.session_state:
@@ -20,7 +21,7 @@ if "amount_input" not in st.session_state:
 if "amount_clicked" not in st.session_state:
     st.session_state.amount_clicked = False
 
-# --- Function to clear amount input on click ---
+# --- Function to clear amount on first click ---
 def clear_amount():
     if not st.session_state.amount_clicked:
         st.session_state.amount_input = 0.0
@@ -54,7 +55,7 @@ with st.form("expense_form"):
 
     submitted = st.form_submit_button("Add Expense")
 
-    # Handle form submission inside the form block
+    # Process form submission
     if submitted:
         new_entry = {
             "ID": str(uuid.uuid4()),
@@ -63,17 +64,15 @@ with st.form("expense_form"):
             "Description": description,
             "Amount": st.session_state.amount_input
         }
-        st.session_state.expenses = pd.concat([st.session_state.expenses, pd.DataFrame([new_entry])], ignore_index=True)
+        st.session_state.expenses = pd.concat(
+            [st.session_state.expenses, pd.DataFrame([new_entry])],
+            ignore_index=True
+        )
         st.success("✅ Expense added!")
 
-        # Reset amount field
+        # Reset amount field after submit
         st.session_state.amount_input = 0.0
         st.session_state.amount_clicked = False
-
-
-    # Reset amount field
-    st.session_state.amount_input = 0.0
-    st.session_state.amount_clicked = False
 
 # --- Editable Table ---
 st.subheader("🧾 Expense Summary")
@@ -82,16 +81,21 @@ if not st.session_state.expenses.empty:
     for idx, row in st.session_state.expenses.iterrows():
         col1, col2, col3, col4, col5, col6 = st.columns([1.5, 2, 3, 2, 1.5, 1])
         col1.date_input("Date", row["Date"], key=f"date_{row['ID']}")
-        col2.selectbox("Category", st.session_state.custom_categories,
-                       index=st.session_state.custom_categories.index(row["Category"]), key=f"cat_{row['ID']}")
+        col2.selectbox(
+            "Category", st.session_state.custom_categories,
+            index=st.session_state.custom_categories.index(row["Category"]),
+            key=f"cat_{row['ID']}"
+        )
         col3.text_input("Description", row["Description"], key=f"desc_{row['ID']}")
         col4.number_input("Amount", value=row["Amount"], format="%.2f", key=f"amt_{row['ID']}")
+
         if col5.button("💾 Update", key=f"update_{row['ID']}"):
             st.session_state.expenses.loc[idx, "Date"] = st.session_state[f"date_{row['ID']}"]
             st.session_state.expenses.loc[idx, "Category"] = st.session_state[f"cat_{row['ID']}"]
             st.session_state.expenses.loc[idx, "Description"] = st.session_state[f"desc_{row['ID']}"]
             st.session_state.expenses.loc[idx, "Amount"] = st.session_state[f"amt_{row['ID']}"]
             st.success("Updated successfully")
+
         if col6.button("🗑️ Delete", key=f"del_{row['ID']}"):
             st.session_state.expenses.drop(index=idx, inplace=True)
             st.session_state.expenses.reset_index(drop=True, inplace=True)
@@ -111,15 +115,14 @@ if not st.session_state.expenses.empty:
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(data=summary, x="Category", y="Amount", palette="muted", ax=ax)
 
-    # Add labels
-    for i in ax.containers:
-        ax.bar_label(i, fmt="₹%.2f", label_type="edge", fontsize=9)
+    for container in ax.containers:
+        ax.bar_label(container, fmt="₹%.2f", label_type="edge", fontsize=9)
 
     ax.set_ylabel("Amount (INR)")
     ax.set_title("Category-wise Expense Breakdown")
     st.pyplot(fig)
 
-    # Optional: Pie Chart
+    # Optional Pie Chart
     with st.expander("📈 Show Pie Chart"):
         fig2, ax2 = plt.subplots()
         ax2.pie(summary["Amount"], labels=summary["Category"], autopct="%.1f%%", startangle=90, counterclock=False)
